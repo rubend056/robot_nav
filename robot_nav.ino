@@ -203,9 +203,33 @@ void my_go(int base_run, int change){
    }else stp();
 }
 
-float floats[3*4];
-unsigned char char_buff[4];
-int c_counter = -1;
+class CommObject{
+    public:
+        float x=0, y=0, s=0;
+        bool square = false;
+        uint8_t color = 0;
+        // uint8_t type=0; // If 0 bit is on, then square else sphere, 1-7th bits are used for colors, since only 4 colors only 6-7 bits will be used\
+        meaning blue, green, red, yellow, in that order.
+    	static CommObject* getObjects(uint8_t* d, int n, int* out_n);
+		// static uint8_t* getBytes(std::vector<CommObject> objects, int* n);
+};
+
+CommObject* CommObject::getObjects(uint8_t* d, int n, int* out_n){
+	int osize = (4*3+1); *out_n = n / osize;
+	CommObject *o = new CommObject[*out_n];
+	for(int i=0;i<*out_n;i++){
+		uint8_t* j = d + osize*i;
+		o[i].x = *((float*)(j));
+		o[i].y = *((float*)(j+4));
+		o[i].s = *((float*)(j+8));
+		o[i].square = (*(j+12) & (1 << 7)) ? 1 : 0;
+		o[i].color = *(j+12) & 3;
+	}
+	return o;
+}
+
+unsigned char char_buff[300];
+int c_counter = 0;
 bool done_read = false;
 unsigned long done_time = 0;
 
@@ -219,40 +243,96 @@ void serialComm2()
   {
 //    String newChar=Serial1.read();
 //    Serial.println(newChar);
-    c_counter++;
-    for(int i=0;i<sizeof(char_buff)-1;i++)char_buff[i]=char_buff[i+1]; // Shifting charbuff 1 to the left
-    Serial2.readBytes(char_buff+3, 1);
-    char c = char_buff[sizeof(char_buff)-1];
+    
+    
+    Serial2.readBytes(char_buff+c_counter, 1);
+    char c = char_buff[c_counter];
 //    Serial.print(c);
     // So we just added a new character to our buffer
     
     if (c == 'e'){
-      if (char_buff[sizeof(char_buff)-2] == '\n'){
+      if (char_buff[c_counter-1] == '\n'){
         // Checksum and done
-        c_counter=-1;done_read = true;
+        done_read = true;
       }
     }
-    if (!done_read){
-      if (c_counter-3 >= 0 && c_counter-3 < sizeof(floats)) ((uint8_t*)floats)[c_counter-3] = char_buff[sizeof(char_buff)-4]; 
-//      else {Serial.println("f_counter invalid");}
-    }
+    
+    c_counter++;
   }
   if (done_read){
     done_time = millis();
-    Serial.println("");
-    Serial.print(floats[0]);
-    Serial.print(" ");
-    Serial.print(floats[1]);
-    Serial.print(" ");
-    Serial.print(floats[2]);
-    Serial.println(" ");
+    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed" );
+    
+    int n;
+    CommObject* objects = CommObject::getObjects(char_buff, c_counter-4, &n);
+    
+    // Serial.println("");
+    // Serial.print(floats[0]);
+    // Serial.print(" ");
+    // Serial.print(floats[1]);
+    // Serial.print(" ");
+    // Serial.print(floats[2]);
+    // Serial.println(" ");
     
     my_go(floats[2] < 0.8 ? 100 : 0, (int)((floats[0] - 0.5) * 200));
     
+    c_counter=0;
    }
-   if (millis() - done_time > 1000)stp();
-    
+   
+   if (millis() - done_time > 400)stp(); 
   }  
+
+// float floats[3*4];
+// unsigned char char_buff[4];
+// int c_counter = -1;
+// bool done_read = false;
+// unsigned long done_time = 0;
+
+// void serialComm2()
+// {
+//   //char *newChar;
+  
+// //  Serial.println("s");
+//   done_read = false;
+//   if(Serial2.available())
+//   {
+// //    String newChar=Serial1.read();
+// //    Serial.println(newChar);
+//     c_counter++;
+//     for(int i=0;i<sizeof(char_buff)-1;i++)char_buff[i]=char_buff[i+1]; // Shifting charbuff 1 to the left
+//     Serial2.readBytes(char_buff+3, 1);
+//     char c = char_buff[sizeof(char_buff)-1];
+// //    Serial.print(c);
+//     // So we just added a new character to our buffer
+    
+//     if (c == 'e'){
+//       if (char_buff[sizeof(char_buff)-2] == '\n'){
+//         // Checksum and done
+//         c_counter=-1;done_read = true;
+//       }
+//     }
+//     if (!done_read){
+//       if (c_counter-3 >= 0 && c_counter-3 < sizeof(floats)) ((uint8_t*)floats)[c_counter-3] = char_buff[sizeof(char_buff)-4]; 
+// //      else {Serial.println("f_counter invalid");}
+//     }
+//   }
+//   if (done_read){
+//     done_time = millis();
+//     Serial.println("");
+//     Serial.print(floats[0]);
+//     Serial.print(" ");
+//     Serial.print(floats[1]);
+//     Serial.print(" ");
+//     Serial.print(floats[2]);
+//     Serial.println(" ");
+    
+//     my_go(floats[2] < 0.8 ? 100 : 0, (int)((floats[0] - 0.5) * 200));
+    
+//    }
+//    if (millis() - done_time > 1000)stp();
+    
+//   }  
+
 
 
 void receiveCommand(char oComm)
