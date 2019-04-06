@@ -261,7 +261,7 @@ void serialComm2()
   }
   if (done_read){
     done_time = millis();
-    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed" );
+    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed " + String(c_counter) + " " + String(*((uint16_t*)(char_buff+c_counter-4))));
     
     int n;
     CommObject* objects = CommObject::getObjects(char_buff, c_counter-4, &n);
