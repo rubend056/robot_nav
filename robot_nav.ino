@@ -217,9 +217,10 @@ void rotate(float angle){
     diff = -wrap<float>(imu_angle - angle, -180, 180);
     Serial.println(String(imu_angle)+ " "+ String(diff));
     my_go(0, clamp<float>(diff/10,-10,10));
-  }while(abs(diff) > 10);
+  }while(abs(diff) > 5);
   stp();
 }
+
 CommObject otarget;
 void go_obj(){
   while(!get_comm()){}
@@ -246,11 +247,18 @@ void go_obj(){
     );
   stp();
 }
-// Non-blocking
-void go_round(){
+// Non-blocking go around function
+unsigned long round_time;
+float round_angle;
+void go_round(int speed, int angle_p_sec){
   imu_update();
   
+  round_angle = wrap<float>(round_angle - (angle_p_sec * .001 (millis() - round_time /*Delta time*/)), 0, 360);
+  round_time = millis();
   
+  float diff = -wrap<float>(imu_angle - round_angle, -180, 180);
+  // Serial.println(String(imu_angle)+ " "+ String(diff));
+  my_go(speed, clamp<float>(diff/10, -20, 10));
 }
 
 enum State{Static=0, Finding, Picking, Placing};
