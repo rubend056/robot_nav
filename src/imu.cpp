@@ -1,7 +1,7 @@
 #include "imu.h"
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
-#include <utility/imumaths.h>
+//#include <Adafruit_Sensor.h>
+#include "Adafruit_BNO055.h"
+#include "utility/imumaths.h"
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
 

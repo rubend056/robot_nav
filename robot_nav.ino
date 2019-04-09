@@ -1,8 +1,8 @@
 #include "Arduino.h"
 #include <Wire.h>
-#include "laser_ds.h"
-#include "imu.h"
-#include "motor.h"
+#include "src/laser_ds.h"
+#include "src/imu.h"
+#include "src/motor.h"
 //#include "robot.h"
 
 // Encoder definitions
