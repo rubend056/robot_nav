@@ -32,10 +32,10 @@ Imu imu;
   White encoder B output
 */
 
-Motor motor1(44, 22, 24);//front right
-Motor motor2(5, 51, 52); //front left
+Motor motor2(44, 24, 22);//front right
+Motor motor4(5, 51, 52); //front left
 Motor motor3(46, 50, 48);//back left
-Motor motor4(45, 26, 28);//back right
+Motor motor1(45, 28, 26);//back right
 
 void count1();
 void count2();
@@ -78,7 +78,7 @@ boolean newData = false;
   Arduino 19 (RX1) to shield 8
 */
 
-#define MVAL 25.
+#define MVAL 10.
 
 void count1(){encoderValue1++;}
 void count2(){encoderValue2++;}
@@ -112,12 +112,21 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(ENCODER_3), count3, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_4), count4, RISING);
   rotating = false;
-
+//  my_go(0,-2);
 }
 
 void loop()
 {
-  //printData();
+//  motor1.setVal(-150);
+//  delay(1000);
+//  motor2.setVal(-150);
+//  delay(1000);
+//  motor3.setVal(-150);
+//  delay(1000);
+//  motor4.setVal(-150);
+//  delay(1000);
+//  stp();
+//  printData();
  control();
 //  forwards(100);
 //  for(int i=0;i<150;i+=5){
@@ -154,7 +163,7 @@ void my_go(int base_run, int change) {
 //  }else{
 //    
 //  }
-  
+//  for(int i=0;i<4;i++)Serial.print(String(v[i]) + " ");
   motor1.setVal(v[0]);
   motor2.setVal(v[1]);
   motor3.setVal(v[1]);
@@ -170,7 +179,7 @@ class CommObject {
     // uint8_t type=0; // If 0 bit is on, then square else sphere, 1-7th bits are used for colors, since only 4 colors only 6-7 bits will be used\
     meaning blue, green, red, yellow, in that order.
     void print(){
-        Serial.println("");
+//        Serial.println("");
         Serial.print(x);
         Serial.print(" ");
         Serial.print(y);
@@ -179,8 +188,8 @@ class CommObject {
         Serial.print(" ");
         Serial.print(square);
         Serial.print(" ");
-        Serial.print(color);
-        Serial.println(" ");
+        Serial.println(color);
+//        Serial.println();
       }
     static CommObject* getObjects(uint8_t* d, int n, int* out_n);
     // static uint8_t* getBytes(std::vector<CommObject> objects, int* n);
@@ -241,8 +250,8 @@ void go_obj(){
       if (millis() - c_time > 50)stp();
 //  }
   }while(
-//    true
-    (otarget.s < 0.2 || otarget.s > 0.24) || (millis() - c_time > 50)
+    true
+//    (otarget.s < 0.2 || otarget.s > 0.24) || (millis() - c_time > 50)
     );
   stp();
 }
@@ -286,9 +295,7 @@ void control(){
       Serial.println("Passed to finding");
       break;
     case Finding:
-      
       go_obj();
-      
       Serial.println("Passed to picking");
       state_f = Picking;
       break;
@@ -332,14 +339,14 @@ bool get_comm()
     //    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed " + String(c_counter) + " " + String(*((uint16_t*)(char_buff+c_counter-4))));
     if (c_counter - 4 == checksum_val) {
       checksum_good = true;
-      Serial.println("Good check");
+//      Serial.println("Good check");
       if (objects)delete[] objects;
       objects = CommObject::getObjects(char_buff, c_counter - 4, &obj_n);
 //      Serial.println(obj_n);
 //      for(int i=0;i<obj_n;i++){
 //        objects[i].print();
 //      }
-    }else Serial.println("Bad checksum " + String(c_counter - 4) + " " + String(checksum_val) );
+    }//else Serial.println("Bad checksum " + String(c_counter - 4) + " " + String(checksum_val) );
     c_counter = 0;
   }
 //  Serial.println(camera_done && checksum_good);
