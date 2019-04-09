@@ -2,7 +2,8 @@
 #include <Wire.h>
 #include "laser_ds.h"
 #include "imu.h"
-#include "robot.h"
+#include "motor.h"
+//#include "robot.h"
 
 // Encoder definitions
 #define ENCODER_1 6
@@ -77,11 +78,13 @@ boolean newData = false;
   Arduino 19 (RX1) to shield 8
 */
 
+#define MVAL 25.
 
 void count1(){encoderValue1++;}
 void count2(){encoderValue2++;}
 void count3(){encoderValue3++;}
 void count4(){encoderValue4++;}
+void control();
 void setup()
 {
   //initialization of i2c for sensors
@@ -90,8 +93,8 @@ void setup()
   Serial.flush();
   Serial1.begin(115200);//mega-odroid
   Serial1.flush();
-  Serial2.begin(115200);//mega-nano
-  Serial2.flush();
+  Serial3.begin(115200);//mega-nano
+  Serial3.flush();
 
   //  Init Lasers dist sensors
   lasers.setAddy();
@@ -114,8 +117,8 @@ void setup()
 
 void loop()
 {
-  printData();
-//  control();
+  //printData();
+ control();
 //  forwards(100);
 //  for(int i=0;i<150;i+=5){
 ////    motor1.setVal(-i);
@@ -142,8 +145,8 @@ void my_go(int base_run, int change) {
   Serial.println(change);
 
   for(int i=0;i<2;i++){
-    if(v[i]<0)v[i]-=76;else v[i]+=76;
-    v[i] = clamp<int>(v[i],-110,110);
+    if(v[i]<0)v[i]-=1170/MVAL;else v[i]+=1170/MVAL;
+    v[i] = clamp<int>(v[i],-1500/MVAL,1500/MVAL);
   }
   
 //  if(base_run < 5){
@@ -161,11 +164,24 @@ void my_go(int base_run, int change) {
 
 class CommObject {
   public:
-    float x = 0, y = 0, s = 0;
+    float x = 0.0, y = 0.0, s = 0.0;
     bool square = false;
     uint8_t color = 0;
     // uint8_t type=0; // If 0 bit is on, then square else sphere, 1-7th bits are used for colors, since only 4 colors only 6-7 bits will be used\
     meaning blue, green, red, yellow, in that order.
+    void print(){
+        Serial.println("");
+        Serial.print(x);
+        Serial.print(" ");
+        Serial.print(y);
+        Serial.print(" ");
+        Serial.print(s);
+        Serial.print(" ");
+        Serial.print(square);
+        Serial.print(" ");
+        Serial.print(color);
+        Serial.println(" ");
+      }
     static CommObject* getObjects(uint8_t* d, int n, int* out_n);
     // static uint8_t* getBytes(std::vector<CommObject> objects, int* n);
 };
@@ -190,31 +206,55 @@ unsigned long c_time = 0;
 int disF, disB, disL, disR;
 
 CommObject* objects;
-int obj_n;
+int obj_n=0;
 
-float imu_angle;
+float imu_angle=0;
 
 void rotate(float angle){
   float diff;
   do{
     imu_update();
-    diff = wrap<float>(imu_angle - angle, -180, 180);
-    my_go(0, diff);
-  }while(abs(diff) > 3);
+    diff = -wrap<float>(imu_angle - angle, -180, 180);
+    Serial.println(String(imu_angle)+ " "+ String(diff));
+    my_go(0, clamp<float>(diff/10,-10,10));
+  }while(abs(diff) > 10);
   stp();
 }
-void go_obj(bool square, int color){
-  for(int i=0;i<obj_n;i++){
-    if (!objects[i].square && objects[i].color == 0){
-      my_go(objects[i].s < 0.15 ? 3 / objects[i].s : 0, (int)((objects[i].x - 0.5) * 100));
-      break;
-    }
-  }
+CommObject otarget;
+void go_obj(){
+  while(!get_comm()){}
+//  while(1){
+  do{
+    if(get_comm()){
+//      Serial.println(obj_n);
+      for(int i=0;i<obj_n;i++){
+//        objects[i].print();
+        if (!objects[i].square && objects[i].color == 0){
+          c_time = millis();
+          memcpy(&otarget, &objects[i], sizeof(CommObject));
+          otarget.print();
+          my_go(objects[i].s < 0.21 ? 1. / objects[i].s : 0, (int)((objects[i].x - 0.5) * 40));
+          break;
+        }
+      }
+    }else
+      if (millis() - c_time > 50)stp();
+//  }
+  }while(
+//    true
+    (otarget.s < 0.2 || otarget.s > 0.24) || (millis() - c_time > 50)
+    );
+  stp();
+}
+// Non-blocking
+void go_round(){
+  imu_update();
+  
+  
 }
 
-
-enum State{Static, Finding, Picking, Placing};
-State state = Static;
+enum State{Static=0, Finding, Picking, Placing};
+State state_f = Finding;
 
 
 //***** Sensors update functions
@@ -230,27 +270,36 @@ void camera_update(){
   // Getting objects from camera
   if(get_comm()){
     // We got some objects...
-    c_time = millis();
+//    c_time = millis();
   }
 }
 //*******
 
 void control(){
-  switch(state){
-    Static:
+//  Serial.println("1");
+  switch(state_f){
+    case Static:
+      Serial.println("2");
       imu_update();
       rotate(wrap<float>(imu_angle - 45, 0, 360));
-      state = Finding;
+      state_f = Finding;
+      Serial.println("Passed to finding");
       break;
-    Finding:
+    case Finding:
+      
+      go_obj();
+      
+      Serial.println("Passed to picking");
+      state_f = Picking;
+      break;
+    case Picking:
       
       break;
-    Picking:
+    case Placing:
       
       break;
-    Placing:
-      
-      break;
+    default:
+      Serial.println(state_f);
   }
 //  if (millis() - c_time > 50)stp();
   
@@ -260,44 +309,41 @@ unsigned char char_buff[300];
 int c_counter = 0;
 bool get_comm()
 {
-  if (objects)delete[] objects;
+  
   bool camera_done = false;
-  while (Serial2.available())
+  while (Serial3.available())
   {
-    Serial2.readBytes(char_buff + c_counter, 1);
+    Serial3.readBytes(char_buff + c_counter, 1);
     char c = char_buff[c_counter]; // So we just added a new character to our buffer
 
     if (c == 'e') {
       if (char_buff[c_counter - 1] == '\n') {
         // Checksum and done
         camera_done = true;
+        c_counter++;
         break;
       }
     }
-
     c_counter++;
   }
+  bool checksum_good = false;
   if (camera_done) {
+    auto checksum_val = *((uint16_t*)(char_buff + c_counter - 4));
     //    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed " + String(c_counter) + " " + String(*((uint16_t*)(char_buff+c_counter-4))));
-    if (c_counter - 4 == *((uint16_t*)(char_buff + c_counter - 4))) {
-      
+    if (c_counter - 4 == checksum_val) {
+      checksum_good = true;
+      Serial.println("Good check");
+      if (objects)delete[] objects;
       objects = CommObject::getObjects(char_buff, c_counter - 4, &obj_n);
-      
-//      Serial.println("");
-//      Serial.print(objects[0].x);
-//      Serial.print(" ");
-//      Serial.print(objects[0].y);
-//      Serial.print(" ");
-//      Serial.print(objects[0].s);
-//      Serial.print(" ");
-//      Serial.print(objects[0].square);
-//      Serial.print(" ");
-//      Serial.print(objects[0].color);
-//      Serial.println(" ");
-    }
+//      Serial.println(obj_n);
+//      for(int i=0;i<obj_n;i++){
+//        objects[i].print();
+//      }
+    }else Serial.println("Bad checksum " + String(c_counter - 4) + " " + String(checksum_val) );
     c_counter = 0;
   }
-  return camera_done;
+//  Serial.println(camera_done && checksum_good);
+  return camera_done && checksum_good;
 }
 
 template<typename T>
