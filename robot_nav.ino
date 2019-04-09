@@ -3,7 +3,6 @@
 #include "src/laser_ds.h"
 #include "src/imu.h"
 #include "src/motor.h"
-//#include "robot.h"
 
 // Encoder definitions
 #define ENCODER_1 6
@@ -13,9 +12,6 @@
 #define ENCODEROUTPUT 1200
 
 int number = 0;
-//int state = 0;
-
-
 volatile long encoderValue1 = 0;
 volatile long encoderValue2 = 0;
 volatile long encoderValue3 = 0;
@@ -41,25 +37,8 @@ void count1();
 void count2();
 void count3();
 void count4();
-
-//void forwards(int pwm);
-//void backwards(int pwm);
-//void right(int pwm);
-//void left(int pwm);
-//void rotateRight(int pwm);
-//void rotateLeft(int pwm);
-//void diagonalLeftUp(int pwm);
-//void diagonalRightUp(int pwm);
 char cc;
-//void stp();
-//void printData();
-//void receiveCommand();
-//void sendCommand(char a);
-//void firstStep();
-//void sendData();
-//void receiveData();
-//void parseData();
-//void showParsedData();
+
 boolean rotating = false;
 boolean stepOne = false;
 float xCor = 0.0;
@@ -85,6 +64,10 @@ void count2(){encoderValue2++;}
 void count3(){encoderValue3++;}
 void count4(){encoderValue4++;}
 void control();
+/*
+ * 
+ * ////////////////////Setup and Loop//////////////////////////////////////////
+ */
 void setup()
 {
   //initialization of i2c for sensors
@@ -115,30 +98,17 @@ void setup()
 //  my_go(0,-2);
 }
 
+
 void loop()
 {
-//  motor1.setVal(-150);
-//  delay(1000);
-//  motor2.setVal(-150);
-//  delay(1000);
-//  motor3.setVal(-150);
-//  delay(1000);
-//  motor4.setVal(-150);
-//  delay(1000);
-//  stp();
-//  printData();
- control();
-//  forwards(100);
-//  for(int i=0;i<150;i+=5){
-////    motor1.setVal(-i);
-////    motor4.setVal(-i);
-////    motor2.setVal(i);
-////    motor3.setVal(i);
-//    Serial.println(i);
-//    delay(500);
-//  }
-//  serialComm2();
+  control();
 }
+/*
+ * 
+ */////////////////////////////////////////////////////////////////////// 
+ * 
+ */
+
 
 void my_go(int base_run, int change) {
   // Baserun from 0-100, change -100 - 100
@@ -263,7 +233,7 @@ void go_round(){
 }
 
 enum State{Static=0, Finding, Picking, Placing};
-State state_f = Finding;
+State state_f = Static;
 
 
 //***** Sensors update functions
@@ -365,67 +335,6 @@ T wrap(T v, T l, T h){
   }
   return v;
 }
-
-
-//void receiveCommand(char oComm)
-//{
-//  switch (oComm)
-//  {
-//    case 's':
-//      firstStep();
-//      Serial.println("Case 0");
-//      break;
-//    case '1':
-//      //stp();
-//      forwards(65);
-//      Serial.println("Case 1");
-//      break;
-//    case '2':
-//      //stp();
-//      rotateRight(65);
-//      Serial.println("Case 2");
-//      break;
-//    case '3':
-//      Serial.println("Case 3");
-//      break;
-//    case '4':
-//      //stp();
-//      rotateLeft(65);
-//      Serial.println("Case 4");
-//      break;
-//    case 'z':
-//      stp();
-//      Serial.println("Case 5");
-//      break;
-//    default:
-//      stp();
-//      Serial.println("Case default");
-//      break;
-//  }
-//}
-//void firstStep()
-//{
-//  float angle = imu.getPhi();
-//  Serial.println(angle);
-//  if (!stepOne)
-//  {
-//    while (angle <= 60)
-//    {
-//      angle = imu.getPhi();
-//      Serial.print("Angle inside:");
-//      Serial.println(angle);
-//      if (!rotating)
-//      {
-//        rotateRight(70);
-//        rotating = true;
-//      }
-//      delay(10);
-//    }
-//    stp();
-//    rotating = false;
-//    stepOne = true;
-//  }
-//}
 void sendCommand(char a)
 {
   if (Serial1.available())
@@ -488,58 +397,6 @@ void rpm()
   }
 
 }
-
-
-/*
-   function that executes whenever data is received from master
-   this function is registered as an event, see setup()
-*/
-
-// Right 1 and 4
-// Left 2 and 3
-//void forwards(int pwm)
-//{
-//  motor1.forward(pwm);
-//  motor2.forward(pwm);
-//  motor3.forward(pwm);
-//  motor4.forward(pwm);
-//}
-//
-//void backwards(int pwm)
-//{
-//  motor1.backward(pwm);
-//  motor2.backward(pwm);
-//  motor3.backward(pwm);
-//  motor4.backward(pwm);
-//}
-//
-//void rotateRight(int pwm)
-//{
-//  motor1.backward(pwm);
-//  motor2.forward(pwm);
-//  motor3.forward(pwm);
-//  motor4.backward(pwm);
-//}
-//
-//void rotateLeft(int pwm)
-//{
-//  motor1.forward(pwm);
-//  motor2.backward(pwm);
-//  motor3.backward(pwm);
-//  motor4.forward(pwm);
-//}
-//
-//void diagonalLeftUp(int pwm)
-//{
-//  motor1.forward(pwm);
-//  motor3.forward(pwm);
-//}
-//
-//void diagonalRightUp(int pwm)
-//{
-//  motor2.forward(pwm);
-//  motor4.forward(pwm);
-//}
 
 void stp() {
   motor1.stp();
