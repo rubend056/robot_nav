@@ -121,6 +121,17 @@ void setup()
 
 void loop()
 {
+  // motor1.setVal(-200);
+  // delay(1000);
+  // motor2.setVal(-200);
+  // delay(1000);
+  // motor3.setVal(-200);
+  // delay(1000);
+  // motor4.setVal(-200);
+  // delay(1000);
+  // stp();
+  // delay(1000);
+  
   control();
 }
 ///////////////////////////////////////////////////////////////////////
@@ -172,11 +183,12 @@ void rotate(float angle) {
     diff = -wrap<float>(imu_angle - angle, -180, 180);
     Serial.println(String(imu_angle)+ " "+ String(diff));
     my_go(0, clamp<float>(diff/10,-10,10));
+    delay(50);
   }while(abs(diff) > 5);
   stp();
 }
 
-// CommObject* otarget;
+CommObject* otarget=nullptr;
 void go_obj() {
   while (!get_comm()) {}
   //  while(1){
@@ -188,18 +200,20 @@ void go_obj() {
         if (!objects[i]->poly /*Circle*/ && objects[i]->color == 0 /*Blue*/) {
           auto c = (CommCircle*)objects[i];
           c_time = millis();
-          // memcpy(&otarget, objects[i], sizeof(CommObject));
-          // otarget.print();
           
-          my_go(c->r < 0.21 ? 1. / c->r : 0, (int)((objects[i]->x - 0.5) * 40));
+          memcpy(&otarget, objects[i], objecgs[i]->poly ? sizeof(CommPoly) : sizeof(CommCircle));
+          
+          my_go(c->r < 0.21 ? .7 / c->r : 0, (int)((objects[i]->x - 0.5) * 60));
           break;
         }
       }
     } else if (millis() - c_time > 50)stp();
     //  }
   } while (
-    true
-    //    (otarget.s < 0.2 || otarget.s > 0.24) || (millis() - c_time > 50)
+    // true
+    otarget == nullptr || 
+    ( otarget->poly ? ((CommPoly*)otarget)->sx < .3 : ((CommCircle*)otarget)->r < .1 ) || 
+    ( millis() - c_time > 50)
   );
   stp();
 }
@@ -219,7 +233,7 @@ void go_round(int speed, int angle_p_sec){
 }
 
 enum State {Static = 0, Finding, Picking, Placing};
-State state_f = Static;
+State state = Finding;
 
 
 //***** Sensors update functions
@@ -242,27 +256,30 @@ void camera_update() {
 
 void control() {
   //  Serial.println("1");
-  switch (state_f) {
+  switch (state) {
     case Static:
       Serial.println("2");
       imu_update();
       rotate(wrap<float>(imu_angle - 45, 0, 360));
-      state_f = Finding;
+      state = Finding;
       Serial.println("Passed to finding");
       break;
     case Finding:
       go_obj();
       Serial.println("Passed to picking");
-      state_f = Picking;
+      state = Picking;
       break;
     case Picking:
-
+      Serial3.print('p');
+      while(!Serial3.available() || Serial3.read() != 'c'){delay(500);Serial.println("Still nothing");}
+      state = Placing;
+      Serial.println("Passed to placing");
       break;
     case Placing:
-
+      
       break;
     default:
-      Serial.println(state_f);
+      Serial.println(state);
   }
   //  if (millis() - c_time > 50)stp();
 
