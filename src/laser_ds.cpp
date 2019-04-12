@@ -17,7 +17,10 @@ Lasers::Lasers(int F_pin, int B_pin, int L_pin, int R_pin) {
 
 void Lasers::setAddy() {
 
-  pinMode(_pinF, OUTPUT);
+  pinMode(_pinF, OUTPUT);void count1();
+// void count2();
+// void count3();
+// void count4();
   pinMode(_pinB, OUTPUT);
   pinMode(_pinL, OUTPUT);
   pinMode(_pinR, OUTPUT);
@@ -82,7 +85,6 @@ void Lasers::i2cScan() {
 
   for (byte i = 1; i < 120; i++)
   {
-
     Wire.beginTransmission (i);
     if (Wire.endTransmission () == 0)
     {

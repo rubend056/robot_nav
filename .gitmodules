@@ -1,0 +1,6 @@
+[submodule "src/nav_serial"]
+	path = src/nav_serial
+	url = git@github.com:rubend056/robot_nav_common.git
+[submodule "src/standard_libs"]
+	path = src/standard_libs
+	url = git@github.com:rubend056/cpp_slibs.git

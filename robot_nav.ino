@@ -1,7 +1,10 @@
 #include "Arduino.h"
 #include <Wire.h>
+#include "src/options.h"
 #include "src/laser_ds.h"
 #include "src/imu.h"
+#include "src/standard_libs/misc.h"
+#include "src/nav_serial/comm_class.h"
 #include "src/motor.h"
 
 // Encoder definitions
@@ -10,6 +13,7 @@
 #define ENCODER_3 3
 #define ENCODER_4 2
 #define ENCODEROUTPUT 1200
+
 
 int number = 0;
 volatile long encoderValue1 = 0;
@@ -33,22 +37,22 @@ Motor motor4(5, 51, 52); //front left
 Motor motor3(46, 50, 48);//back left
 Motor motor1(45, 28, 26);//back right
 
-void count1();
-void count2();
-void count3();
-void count4();
-char cc;
+// void count1();
+// void count2();
+// void count3();
+// void count4();
+// char cc;
 
-boolean rotating = false;
-boolean stepOne = false;
-float xCor = 0.0;
-float yCor = 0.0;
-float objSize = 0.0;
+// boolean rotating = false;
+// boolean stepOne = false;
+// float xCor = 0.0;
+// float yCor = 0.0;
+// float objSize = 0.0;
 
-const byte numChars = 32;
-char receivedChars[numChars];
-char tempChars[numChars];
-boolean newData = false;
+// const byte numChars = 32;
+// char receivedChars[numChars];
+// char tempChars[numChars];
+// boolean newData = false;
 //void my_go(int base_run, int change);
 /*
   Arduino 5V to shield 4
@@ -94,7 +98,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(ENCODER_2), count2, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_3), count3, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_4), count4, RISING);
-  rotating = false;
+  // rotating = false;
   //  my_go(0,-2);
 }
 
@@ -137,54 +141,10 @@ void my_go(int base_run, int change)
     motor4.setVal(v[0]);
 }
 
-
-class CommObject 
-{
-  public:
-    float x = 0.0, y = 0.0, s = 0.0;
-    bool square = false;
-    uint8_t color = 0;
-    // uint8_t type=0; // If 0 bit is on, then square else sphere, 1-7th bits are used for colors, since only 4 colors only 6-7 bits will be used\
-    meaning blue, green, red, yellow, in that order.
-    void print() {
-      //        Serial.println("");
-      Serial.print(x);
-      Serial.print(" ");
-      Serial.print(y);
-      Serial.print(" ");
-      Serial.print(s);
-      Serial.print(" ");
-      Serial.print(square);
-      Serial.print(" ");
-      Serial.println(color);
-      //        Serial.println();
-    }
-    static CommObject* getObjects(uint8_t* d, int n, int* out_n);
-    // static uint8_t* getBytes(std::vector<CommObject> objects, int* n);
-};
-
-
-CommObject* CommObject::getObjects(uint8_t* d, int n, int* out_n) 
-{
-  int osize = (4 * 3 + 1); *out_n = n / osize;
-  CommObject *o = new CommObject[*out_n];
-  for (int i = 0; i < *out_n; i++) {
-    uint8_t* j = d + osize * i;
-    o[i].x = *((float*)(j));
-    o[i].y = *((float*)(j + 4));
-    o[i].s = *((float*)(j + 8));
-    o[i].square = (*(j + 12) & (1 << 7)) ? 1 : 0;
-    o[i].color = *(j + 12) & 3;
-  }
-  return o;
-}
-
-
-
 unsigned long c_time = 0;
 int disF, disB, disL, disR;
 
-CommObject* objects;
+CommObject** objects=nullptr;
 int obj_n = 0;
 
 float imu_angle = 0;
@@ -194,19 +154,13 @@ void rotate(float angle) {
   do {
     imu_update();
     diff = -wrap<float>(imu_angle - angle, -180, 180);
-<<<<<<< HEAD
     Serial.println(String(imu_angle)+ " "+ String(diff));
     my_go(0, clamp<float>(diff/10,-10,10));
   }while(abs(diff) > 5);
-=======
-    Serial.println(String(imu_angle) + " " + String(diff));
-    my_go(0, clamp<float>(diff / 10, -10, 10));
-  } while (abs(diff) > 10);
->>>>>>> 53de422466ef4320f5ae5170f7169251e9666daf
   stp();
 }
 
-CommObject otarget;
+// CommObject* otarget;
 void go_obj() {
   while (!get_comm()) {}
   //  while(1){
@@ -214,12 +168,14 @@ void go_obj() {
     if (get_comm()) {
       //      Serial.println(obj_n);
       for (int i = 0; i < obj_n; i++) {
-        //        objects[i].print();
-        if (!objects[i].square && objects[i].color == 0) {
+        //        objects[i]->print();
+        if (!objects[i]->poly /*Circle*/ && objects[i]->color == 0 /*Blue*/) {
+          auto c = (CommCircle*)objects[i];
           c_time = millis();
-          memcpy(&otarget, &objects[i], sizeof(CommObject));
-          otarget.print();
-          my_go(objects[i].s < 0.21 ? 1. / objects[i].s : 0, (int)((objects[i].x - 0.5) * 40));
+          // memcpy(&otarget, objects[i], sizeof(CommObject));
+          // otarget.print();
+          
+          my_go(c->r < 0.21 ? 1. / c->r : 0, (int)((objects[i]->x - 0.5) * 40));
           break;
         }
       }
@@ -231,26 +187,19 @@ void go_obj() {
   );
   stp();
 }
-<<<<<<< HEAD
+
 // Non-blocking go around function
 unsigned long round_time;
 float round_angle;
 void go_round(int speed, int angle_p_sec){
   imu_update();
   
-  round_angle = wrap<float>(round_angle - (angle_p_sec * .001 (millis() - round_time /*Delta time*/)), 0, 360);
+  round_angle = wrap<float>(round_angle - (angle_p_sec * .001 * (millis() - round_time /*Delta time*/)), 0, 360);
   round_time = millis();
   
   float diff = -wrap<float>(imu_angle - round_angle, -180, 180);
   // Serial.println(String(imu_angle)+ " "+ String(diff));
   my_go(speed, clamp<float>(diff/10, -20, 10));
-=======
-// Non-blocking
-void go_round() {
-  imu_update();
-
-
->>>>>>> 53de422466ef4320f5ae5170f7169251e9666daf
 }
 
 enum State {Static = 0, Finding, Picking, Placing};
@@ -327,16 +276,18 @@ bool get_comm()
   bool checksum_good = false;
   if (camera_done) {
     auto checksum_val = *((uint16_t*)(char_buff + c_counter - 4));
-    //    Serial.println(c_counter-4 == *((uint16_t*)(char_buff+c_counter-4)) ? "Checksum passed" : "Checksum failed " + String(c_counter) + " " + String(*((uint16_t*)(char_buff+c_counter-4))));
     if (c_counter - 4 == checksum_val) {
       checksum_good = true;
       //      Serial.println("Good check");
-      if (objects)delete[] objects;
-      objects = CommObject::getObjects(char_buff, c_counter - 4, &obj_n);
-      //      Serial.println(obj_n);
-      //      for(int i=0;i<obj_n;i++){
-      //        objects[i].print();
-      //      }
+      if(objects)CommObject::DeleteObjects(objects, obj_n);
+      ByteReceiver br(char_buff, c_counter - 4);
+      objects = CommObject::GetObjects(br, obj_n);
+#if DEBUG_L > 0
+      Serial.println(obj_n);
+      for(int i=0;i<obj_n;i++){
+        objects[i]->print();
+      }
+#endif
     }//else Serial.println("Bad checksum " + String(c_counter - 4) + " " + String(checksum_val) );
     c_counter = 0;
   }
@@ -344,22 +295,6 @@ bool get_comm()
   return camera_done && checksum_good;
 }
 
-template<typename T>
-T clamp(T v, T l, T h) {
-  if (v < l)return l;
-  else if (v > h) return h;
-  else return v;
-}
-
-template<typename T>
-T wrap(T v, T l, T h) {
-  if (l > h)return v; else {
-    T r = h - l;
-    while (v < l)v += r;
-    while (v > h)v -= r;
-  }
-  return v;
-}
 void sendCommand(char a)
 {
   if (Serial1.available())
