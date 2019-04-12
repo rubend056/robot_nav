@@ -3,7 +3,7 @@
 #include "src/options.h"
 #include "src/laser_ds.h"
 #include "src/imu.h"
-#include "src/standard_libs/misc.h"
+
 #include "src/nav_serial/comm_class.h"
 #include "src/motor.h"
 
@@ -14,6 +14,22 @@
 #define ENCODER_4 2
 #define ENCODEROUTPUT 1200
 
+template<typename T>
+T clamp(T v, T l, T h) {
+  if (v < l)return l;
+  else if (v > h) return h;
+  else return v;
+}
+
+template<typename T>
+T wrap(T v, T l, T h) {
+  if (l > h)return v; else {
+    T r = h - l;
+    while (v < l)v += r;
+    while (v > h)v -= r;
+  }
+  return v;
+}
 
 int number = 0;
 volatile long encoderValue1 = 0;
